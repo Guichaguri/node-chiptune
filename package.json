@@ -1,0 +1,26 @@
+{
+  "name": "node-chiptune",
+  "version": "1.0.0",
+  "description": "Convert tracker music to PCM streams",
+  "main": "index.js",
+  "author": "Guichaguri",
+  "license": "LGPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Guichaguri/node-chiptune.git"
+  },
+  "keywords": [
+    "chiptune",
+    "tracker",
+    "music",
+    "pcm",
+    "encoder",
+    "openmpt",
+    "libopenmpt",
+    "chiptunes"
+  ],
+  "bugs": {
+    "url": "https://github.com/Guichaguri/node-chiptune/issues"
+  },
+  "homepage": "https://github.com/Guichaguri/node-chiptune#readme"
+}
