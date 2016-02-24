@@ -37,6 +37,7 @@ function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFra
     var data = [];
     var superPipe = duplex.pipe;
     var toPipe = [];
+    var destroyed = false;
 
     // Once it finishes writing, lets decode the music
     duplex.once('finish', function() {
@@ -56,11 +57,7 @@ function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFra
     });
 
     duplex._write = function(chunk, enc, next) {
-        if(Buffer.isBuffer(chunk)) {
-            data.push(chunk);
-        } else {
-            data.push(new Buffer(chunk));
-        }
+        data.push(chunk);
         next();
     };
 
@@ -71,10 +68,14 @@ function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFra
                 cleanupModule(mod_ptr, buf_ptr);
                 mod_ptr = null;
                 buf_ptr = null;
+                destroyed = true;
             }
             duplex.push(buf);
+        } else if(destroyed) {
+            duplex.push(null);
+            duplex.emit('end');
         } else {
-            duplex.push(new Buffer(m).fill(0));
+            duplex.push(null);
         }
     };
 
@@ -87,6 +88,14 @@ function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFra
         }
     };
 
+    duplex.destroy = function() {
+        duplex.end();
+        destroyed = true;
+        cleanupModule(mod_ptr, buf_ptr);
+        mod_ptr = null;
+        buf_ptr = null;
+    };
+
     createProperties(duplex, mod_ptr);
 
     return duplex;
@@ -97,13 +106,24 @@ function createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, b
 
     const mod_ptr = initModule(buffer);
     const buf_ptr = initBuffer(maxFramesPerChunk, bytesPerFrame);
+    var destroyed = false;
 
     readable._read = function() {
+        if(destroyed) {
+            readable.push(null);
+            return;
+        }
         const buf = readModule(mod_ptr, buf_ptr, samplerate, channels, maxFramesPerChunk, bytesPerFrame);
         if(buf == null) {
             cleanupModule(mod_ptr, buf_ptr);
+            destroyed = true;
         }
         readable.push(buf);
+    };
+
+    readable.destroy = function() {
+        destroyed = true;
+        cleanupModule(mod_ptr, buf_ptr);
     };
 
     createProperties(readable, mod_ptr);
