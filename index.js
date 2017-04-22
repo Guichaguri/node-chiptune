@@ -61,11 +61,8 @@ OpenMPT_Module.prototype = {
 
 function openModuleAsStream(buffer, options) {
     const hasOptions = options != null && typeof options == 'object';
-    const duplex = buffer == null || !Buffer.isBuffer(buffer);
 
-    if(duplex && !hasOptions && typeof buffer == 'object') {
-        options = buffer;
-    } else if(!hasOptions) {
+	if(!hasOptions) {
         options = {};
     }
 
@@ -79,85 +76,8 @@ function openModuleAsStream(buffer, options) {
 
     const bytesPerFrame = 2 * channels;
 
-    if(duplex) {
-        return createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFrame);
-    } else {
-        return createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, bytesPerFrame);
-    }
+	return createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, bytesPerFrame);
 };
-
-function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFrame) {
-    // TODO: change duplex to something better
-    const duplex = stream.Duplex();
-
-    var mod_ptr = null;
-    var buf_ptr = null;
-    var data = [];
-    var superPipe = duplex.pipe;
-    var toPipe = [];
-    var destroyed = false;
-
-    // Once it finishes writing, lets decode the music
-    duplex.once('finish', function() {
-        mod_ptr = openModule(Buffer.concat(data));
-        buf_ptr = initBuffer(bytesPerFrame, maxFramesPerChunk);
-        data = null;
-        duplex.emit('readable');
-
-        try {
-            for(var i = 0; i < toPipe.length; i++) {
-                superPipe.apply(duplex, toPipe[i]);
-            }
-            duplex.pipe = superPipe;
-            toPipe = null;
-            superPipe = null;
-        } catch(e) {}
-    });
-
-    duplex._write = function(chunk, enc, next) {
-        data.push(chunk);
-        next();
-    };
-
-    duplex._read = function(m) {
-        if(mod_ptr != null) {
-            const buf = readModule(mod_ptr, buf_ptr, samplerate, channels, maxFramesPerChunk, bytesPerFrame);
-            if(buf == null) {
-                cleanupModule(mod_ptr, buf_ptr);
-                mod_ptr = null;
-                buf_ptr = null;
-                destroyed = true;
-            }
-            duplex.push(buf);
-        } else if(destroyed) {
-            duplex.push(null);
-            duplex.emit('end');
-        } else {
-            duplex.push(null);
-        }
-    };
-
-    // Dirty trick. TODO: Change it to something better
-    duplex.pipe = function(dest, options) {
-        if(mod_ptr != null) {
-            superPipe.apply(duplex, arguments);
-        } else {
-            toPipe.push(arguments);
-        }
-    };
-
-    duplex.destroy = function() {
-        duplex.end();
-        destroyed = true;
-        cleanupModule(mod_ptr, buf_ptr);
-        mod_ptr = null;
-        buf_ptr = null;
-    };
-
-    createProperties(duplex, mod_ptr);
-
-    return duplex;
-}
 
 function createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, bytesPerFrame) {
     const readable = stream.Readable();
