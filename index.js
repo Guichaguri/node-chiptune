@@ -1,7 +1,60 @@
 const stream = require('stream');
 const native = require('./libopenmpt.js');
 
-module.exports = function(buffer, options) {
+module.exports = OpenMPT_Module;
+
+function OpenMPT_Module(fileData) {
+	this.mod_ptr = openModule(fileData);
+}
+
+OpenMPT_Module.prototype = {
+	get repeat() {
+		return native._openmpt_module_get_repeat_count(this.mod_ptr);
+	},	
+	set repeat(count) {
+		native._openmpt_module_set_repeat_count(this.mod_ptr, count);
+	},	
+	get position_seconds() {
+		return native._openmpt_module_get_position_seconds(this.mod_ptr);
+	},
+	set position_seconds(seconds) {
+		native._openmpt_module_set_position_seconds(this.mod_ptr, seconds);
+	},	
+	get duration_seconds() {
+		return native._openmpt_module_get_duration_seconds(this.mod_ptr);
+	},	
+	get current_speed() {
+		return native._openmpt_module_get_current_speed(this.mod_ptr);
+	},	
+	get current_tempo() {
+		return native._openmpt_module_get_current_tempo(this.mod_ptr);
+	},	
+	get current_pattern() {
+		return native._openmpt_module_get_current_pattern(this.mod_ptr);
+	},	
+	get current_row() {
+		return native._openmpt_module_get_current_row(this.mod_ptr);
+	},	
+	get num_channels() {
+		return native._openmpt_module_get_num_channels(this.mod_ptr);
+	},	
+	get num_instruments() {
+		return native._openmpt_module_get_num_instruments(this.mod_ptr);
+	},	
+	get metadata() {
+		const metadata = {};
+		const keys = native.Pointer_stringify(native._openmpt_module_get_metadata_keys(this.mod_ptr)).split(';');
+		for(var i = 0; i < keys.length; i++) {
+			var buf = native._malloc(keys[i].length + 1);
+			native.writeStringToMemory(keys[i], buf);
+			metadata[keys[i]] = native.Pointer_stringify(native._openmpt_module_get_metadata(this.mod_ptr, buf));
+			native._free(buf);
+		}
+		return metadata;
+	}
+}
+
+function openModuleAsStream(buffer, options) {
     const hasOptions = options != null && typeof options == 'object';
     const duplex = buffer == null || !Buffer.isBuffer(buffer);
 
@@ -41,7 +94,7 @@ function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFra
 
     // Once it finishes writing, lets decode the music
     duplex.once('finish', function() {
-        mod_ptr = initModule(Buffer.concat(data));
+        mod_ptr = openModule(Buffer.concat(data));
         buf_ptr = initBuffer(bytesPerFrame, maxFramesPerChunk);
         data = null;
         duplex.emit('readable');
@@ -104,7 +157,7 @@ function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFra
 function createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, bytesPerFrame) {
     const readable = stream.Readable();
 
-    const mod_ptr = initModule(buffer);
+    const mod_ptr = openModule(buffer);
     const buf_ptr = initBuffer(maxFramesPerChunk, bytesPerFrame);
     var destroyed = false;
 
@@ -131,8 +184,8 @@ function createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, b
     return readable;
 }
 
-function initModule(buffer) {
-    var array = new Int8Array(buffer);
+function openModule(fileData) {
+    var array = new Int8Array(fileData);
     var allocMem = native._malloc(array.byteLength);
     native.HEAPU8.set(array, allocMem);
 
