@@ -51,6 +51,11 @@ OpenMPT_Module.prototype = {
 			native._free(buf);
 		}
 		return metadata;
+	},
+	destroy: function () {
+		native._openmpt_module_destroy(this.mod_ptr);
+		this.mod_ptr = null;
+		delete this.mod_ptr;
 	}
 }
 
