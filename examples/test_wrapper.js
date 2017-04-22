@@ -25,7 +25,7 @@ fs.readFile('alf2_zalza_edit.xm', function(err, data) {
         var chiptuneStream = module.openAsStream();
         chiptuneStream.pipe(speakerStream);
         
-        chiptuneStream.on('end', function(){
+        chiptuneStream.on('close', function(){
 			chiptuneStream.unpipe();
 			chiptuneStream.destroy();
 			module.destroy();
