@@ -51,62 +51,51 @@ OpenMPT_Module.prototype = {
 			native._free(buf);
 		}
 		return metadata;
-	},
-	destroy: function () {
-		native._openmpt_module_destroy(this.mod_ptr);
-		this.mod_ptr = null;
-		delete this.mod_ptr;
 	}
 }
 
-function openModuleAsStream(buffer, options) {
-    const hasOptions = options != null && typeof options == 'object';
+class ModuleStream extends stream.Readable {	
+	constructor(module, channels, samplerate, maxFramesPerChunk) {
+		if(channels != 1 && channels != 2 && channels != 4) {
+			throw new Error('Invalid number of channels');
+		}
+		
+		const bytesPerFrame = 2 * channels;
+		
+		const options = {
+			read: function() {
+				if(this.destroyed) {
+					this.push(null);
+					return;
+				}
+				const buf = readModule(module.mod_ptr, this.buf_ptr, samplerate, channels, maxFramesPerChunk, bytesPerFrame);
+				if(buf == null) {
+					native._free(this.buf_ptr);
+				}
+				this.push(buf);
+			}
+		}
+		
+		super(options) // `this` only defined after this point
+		
+		this.buf_ptr = initBuffer(maxFramesPerChunk, bytesPerFrame);
+		this.destroyed = false;
+	}
+	
+	destroy() {
+		this.destroyed = true;
+		native._free(this.buf_ptr);
+	}
+}
 
-	if(!hasOptions) {
-        options = {};
-    }
+OpenMPT_Module.prototype.openAsStream = function(channels = 2, samplerate = 48000, maxFramesPerChunk = 1024) {
+	return new ModuleStream(this, channels, samplerate, maxFramesPerChunk);
+}
 
-    const samplerate = options['sampleRate'] || 48000;
-    const channels = options['channels'] || 2;
-    const maxFramesPerChunk = options['readSize'] || 1024;
-
-    if(channels != 1 && channels != 2 && channels != 4) {
-        throw new Error('Invalid number of channels');
-    }
-
-    const bytesPerFrame = 2 * channels;
-
-	return createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, bytesPerFrame);
-};
-
-function createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, bytesPerFrame) {
-    const readable = stream.Readable();
-
-    const mod_ptr = openModule(buffer);
-    const buf_ptr = initBuffer(maxFramesPerChunk, bytesPerFrame);
-    var destroyed = false;
-
-    readable._read = function() {
-        if(destroyed) {
-            readable.push(null);
-            return;
-        }
-        const buf = readModule(mod_ptr, buf_ptr, samplerate, channels, maxFramesPerChunk, bytesPerFrame);
-        if(buf == null) {
-            cleanupModule(mod_ptr, buf_ptr);
-            destroyed = true;
-        }
-        readable.push(buf);
-    };
-
-    readable.destroy = function() {
-        destroyed = true;
-        cleanupModule(mod_ptr, buf_ptr);
-    };
-
-    createProperties(readable, mod_ptr);
-
-    return readable;
+OpenMPT_Module.prototype.destroy = function () {
+	native._openmpt_module_destroy(this.mod_ptr);
+	this.mod_ptr = null;
+	delete this.mod_ptr;
 }
 
 function openModule(fileData) {
@@ -145,67 +134,4 @@ function readModule(mod_ptr, buf_ptr, samplerate, channels, maxFramesPerChunk, b
 function cleanupModule(mod_ptr, buf_ptr) {
     native._free(buf_ptr);
     native._openmpt_module_destroy(mod_ptr);
-}
-
-function createProperties(obj, mod_ptr) {
-
-    Object.defineProperties(obj, {
-
-        'repeat': {
-            get: function() {
-                return native._openmpt_module_get_repeat_count(mod_ptr);
-            },
-            set: function(count) {
-                native._openmpt_module_set_repeat_count(mod_ptr, count);
-            }
-        },
-        'position': {
-            get: function() {
-                return native._openmpt_module_get_position_seconds(mod_ptr);
-            },
-            set: function(seconds) {
-                native._openmpt_module_set_position_seconds(mod_ptr, seconds);
-            }
-        },
-        'duration': {
-            get: function() {
-                return native._openmpt_module_get_duration_seconds(mod_ptr);
-            }
-        },
-        'current_speed': {
-            get: function() {
-                return native._openmpt_module_get_current_speed(mod_ptr);
-            }
-        },
-        'current_tempo': {
-            get: function() {
-                return native._openmpt_module_get_current_tempo(mod_ptr);
-            }
-        },
-        'num_channels': {
-            get: function() {
-                return native._openmpt_module_get_num_channels(mod_ptr);
-            }
-        },
-        'num_instruments': {
-            get: function() {
-                return native._openmpt_module_get_num_instruments(mod_ptr);
-            }
-        },
-        'metadata': {
-            get: function() {
-                const metadata = {};
-                const keys = native.Pointer_stringify(native._openmpt_module_get_metadata_keys(mod_ptr)).split(';');
-                for(var i = 0; i < keys.length; i++) {
-                    var buf = native._malloc(keys[i].length + 1);
-                    native.writeStringToMemory(keys[i], buf);
-                    metadata[keys[i]] = native.Pointer_stringify(native._openmpt_module_get_metadata(mod_ptr, buf));
-                    native._free(buf);
-                }
-                return metadata;
-            }
-        }
-
-    });
-
 }

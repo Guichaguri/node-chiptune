@@ -1,6 +1,7 @@
 OpenMTP_Module = require('../index.js');
 
 const fs = require('fs');
+const Speaker = require('speaker');
 
 fs.readFile('alf2_zalza_edit.xm', function(err, data) {
     if(err != null) {
@@ -19,5 +20,16 @@ fs.readFile('alf2_zalza_edit.xm', function(err, data) {
         console.log('Input Channels', module.num_channels);
 
         console.log(module.metadata);
+        
+        var speakerStream = new Speaker();
+        var chiptuneStream = module.openAsStream();
+        chiptuneStream.pipe(speakerStream);
+        
+        chiptuneStream.on('end', function(){
+			chiptuneStream.unpipe();
+			chiptuneStream.destroy();
+			module.destroy();
+			module = null;
+		})
     }
 });
