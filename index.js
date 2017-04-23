@@ -88,7 +88,8 @@ class ModuleStream extends stream.Readable {
 	}
 }
 
-OpenMPT_Module.prototype.openAsStream = function(channels = 2, samplerate = 48000, maxFramesPerChunk = 1024) {
+// Default values match those of node-speaker
+OpenMPT_Module.prototype.openAsStream = function(channels = 2, samplerate = 44100, maxFramesPerChunk = 1024) {
 	return new ModuleStream(this, channels, samplerate, maxFramesPerChunk);
 }
 
