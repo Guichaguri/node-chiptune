@@ -8,39 +8,77 @@ function OpenMPT_Module(fileData) {
 }
 
 OpenMPT_Module.prototype = {
-	get repeat() {
+	get repeat_count() {
 		return native._openmpt_module_get_repeat_count(this.mod_ptr);
-	},	
-	set repeat(count) {
+	},
+	set repeat_count(count) {
 		native._openmpt_module_set_repeat_count(this.mod_ptr, count);
-	},	
+	},
 	get position_seconds() {
 		return native._openmpt_module_get_position_seconds(this.mod_ptr);
 	},
-	set position_seconds(seconds) {
+	set_position_seconds: function(seconds) {
 		native._openmpt_module_set_position_seconds(this.mod_ptr, seconds);
-	},	
+	},
+	set_position_order_row: function(orderId, rowId) {
+		return native._openmpt_module_get_duration_seconds(this.mod_ptr, orderId, rowId);
+	},
 	get duration_seconds() {
 		return native._openmpt_module_get_duration_seconds(this.mod_ptr);
-	},	
+	},
 	get current_speed() {
 		return native._openmpt_module_get_current_speed(this.mod_ptr);
-	},	
+	},
 	get current_tempo() {
 		return native._openmpt_module_get_current_tempo(this.mod_ptr);
-	},	
+	},
 	get current_pattern() {
 		return native._openmpt_module_get_current_pattern(this.mod_ptr);
-	},	
+	},
 	get current_row() {
 		return native._openmpt_module_get_current_row(this.mod_ptr);
-	},	
+	},
 	get num_channels() {
 		return native._openmpt_module_get_num_channels(this.mod_ptr);
-	},	
+	},
 	get num_instruments() {
 		return native._openmpt_module_get_num_instruments(this.mod_ptr);
-	},	
+	},
+	get num_orders() {
+		return native._openmpt_module_get_num_orders(this.mod_ptr);
+	},
+	get num_patterns() {
+		return native._openmpt_module_get_num_patterns(this.mod_ptr);
+	},
+	get num_samples() {
+		return native._openmpt_module_get_num_samples(this.mod_ptr);
+	},
+	get num_subsongs() {
+		return native._openmpt_module_get_num_subsongs(this.mod_ptr);
+	},
+	get_pattern_num_rows: function(patternId) {
+		return native._openmpt_module_get_pattern_num_rows(this.mod_ptr, patternId);
+	},
+	get_pattern_row_channel_data: function(patternId, rowId, channelId) {
+		const get_command = native._openmpt_module_get_pattern_row_channel_command.bind(native, this.mod_ptr, patternId, rowId, channelId)
+		
+		const data = {
+			note: get_command(0),
+			instrument: get_command(1),
+			volumeEffect: get_command(2),
+			effect: get_command(3),
+			volume: get_command(4),
+			parameter: get_command(5),
+			get string() {
+				return native._openmpt_module_format_pattern_row_channel(this.mod_ptr, patternId, rowId, channelId, 0, 0);
+			}
+		}
+		
+		return data;
+	},
+	select_subsong: function(subsongId) {
+		return native._openmpt_module_select_subsong(this.mod_ptr, subsongId);
+	},
 	get metadata() {
 		const metadata = {};
 		const keys = native.Pointer_stringify(native._openmpt_module_get_metadata_keys(this.mod_ptr)).split(';');
