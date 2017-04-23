@@ -1,8 +1,8 @@
-var chiptune;
+var OpenMTP_Module;
 try {
-    chiptune = require('node-chiptune');
+    OpenMTP_Module = require('node-chiptune');
 } catch(e) {
-    chiptune = require('../index.js');
+    OpenMTP_Module = require('../index.js');
 }
 
 const fs = require('fs');
@@ -19,28 +19,39 @@ fs.readFile('drozerix_-_mecanum_overdrive.xm', function(err, data) {
         // Lets handle errors if we got any
         console.log(err);
     } else {
-        // This is how we create the chiptune stream
-        // Let's not specify any options
-        var chiptuneStream = chiptune(data);
+        
+        // This is the module object, from which we will create a stream
+        var module = new OpenMTP_Module(data);
 
         // You can optionally get and set some information about the track
 
-        //chiptuneStream.position = 10; // Changes the position to 10 seconds
-        chiptuneStream.repeat = 10; // Make it repeat 10 times. Set it to -1 to repeat forever, 0 to play only one time.
-        console.log('Position', chiptuneStream.position); // Position in seconds
-        console.log('Repeat', chiptuneStream.repeat);
-        console.log('Duration', chiptuneStream.duration); // Duration in seconds
-        console.log('Instruments', chiptuneStream.num_instruments);
-        console.log('Tempo', chiptuneStream.current_tempo);
-        console.log('Speed', chiptuneStream.current_speed);
-        console.log('Input Channels', chiptuneStream.num_channels);
+        module.repeat_count = 10; // Make it repeat 10 times. Set it to -1 to repeat forever, 0 to play only one time.
+        console.log('Position', module.position_seconds); // Position in seconds
+        console.log('Repeat', module.repeat_count);
+        console.log('Duration', module.duration_seconds); // Duration in seconds
+        console.log('Instruments', module.num_instruments);
+        console.log('Tempo', module.current_tempo);
+        console.log('Speed', module.current_speed);
+        console.log('Input Channels', module.num_channels);
 
-        console.log(chiptuneStream.metadata);
-
+        console.log(module.metadata);
+        
+        // This is how we create the chiptune stream
+        // Let's not specify any options
+        var chiptuneStream = module.openAsStream();
+		
         // Now we create the Speaker
         var speakerStream = new Speaker();
 
         // We should be able to pipe the the chiptune stream to the speaker
-        chiptuneStream.pipe(speakerStream);
+		chiptuneStream.pipe(speakerStream);
+        
+        // Once we're done, just close the stream and the module
+        chiptuneStream.on('close', function(){
+			chiptuneStream.unpipe();
+			chiptuneStream.destroy();
+			module.destroy();
+			module = null;
+		})
     }
 });
