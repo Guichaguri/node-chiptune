@@ -18,10 +18,10 @@ OpenMPT_Module.prototype = {
 		return native._openmpt_module_get_position_seconds(this.mod_ptr);
 	},
 	set_position_seconds: function(seconds) {
-		native._openmpt_module_set_position_seconds(this.mod_ptr, seconds);
+		return native._openmpt_module_set_position_seconds(this.mod_ptr, seconds);
 	},
 	set_position_order_row: function(orderId, rowId) {
-		return native._openmpt_module_get_duration_seconds(this.mod_ptr, orderId, rowId);
+		return native._openmpt_module_set_position_order_row(this.mod_ptr, orderId, rowId);
 	},
 	get duration_seconds() {
 		return native._openmpt_module_get_duration_seconds(this.mod_ptr);
@@ -37,6 +37,9 @@ OpenMPT_Module.prototype = {
 	},
 	get current_row() {
 		return native._openmpt_module_get_current_row(this.mod_ptr);
+	},
+	get current_order() {
+		return native._openmpt_module_get_current_order(this.mod_ptr);
 	},
 	get num_channels() {
 		return native._openmpt_module_get_num_channels(this.mod_ptr);
@@ -59,8 +62,9 @@ OpenMPT_Module.prototype = {
 	get_pattern_num_rows: function(patternId) {
 		return native._openmpt_module_get_pattern_num_rows(this.mod_ptr, patternId);
 	},
-	get_pattern_row_channel_data: function(patternId, rowId, channelId) {
-		const get_command = native._openmpt_module_get_pattern_row_channel_command.bind(native, this.mod_ptr, patternId, rowId, channelId)
+	get_pattern_row_channel: function(patternId, rowId, channelId) {
+		const mod_ptr = this.mod_ptr;
+		const get_command = native._openmpt_module_get_pattern_row_channel_command.bind(native, mod_ptr, patternId, rowId, channelId)
 		
 		const data = {
 			note: get_command(0),
@@ -69,12 +73,13 @@ OpenMPT_Module.prototype = {
 			effect: get_command(3),
 			volume: get_command(4),
 			parameter: get_command(5),
-			get string() {
-				return native._openmpt_module_format_pattern_row_channel(this.mod_ptr, patternId, rowId, channelId, 0, 0);
-			}
+			string: native.Pointer_stringify(native._openmpt_module_format_pattern_row_channel(mod_ptr, patternId, rowId, channelId, 16, 0))
 		}
 		
 		return data;
+	},
+	get_order_pattern: function(orderId) {
+		return native._openmpt_module_get_order_pattern(this.mod_ptr, orderId);
 	},
 	select_subsong: function(subsongId) {
 		return native._openmpt_module_select_subsong(this.mod_ptr, subsongId);

@@ -21,9 +21,11 @@ fs.readFile('alf2_zalza_edit.xm', function(err, data) {
 
         console.log(module.metadata);
         
+        /*
         var speakerStream = new Speaker();
         var chiptuneStream = module.openAsStream();
         chiptuneStream.pipe(speakerStream);
+        
         
         chiptuneStream.on('close', function(){
 			chiptuneStream.unpipe();
@@ -31,5 +33,18 @@ fs.readFile('alf2_zalza_edit.xm', function(err, data) {
 			module.destroy();
 			module = null;
 		})
+		*/
+		
+		for(var order = module.current_order; order < module.num_orders; order++) {
+			const pattern = module.get_order_pattern(order);
+			for(var row = 0; row < module.get_pattern_num_rows(pattern); row++) {
+				module.set_position_order_row(order, row);
+				for(var channel = 0; channel < module.num_channels; channel++) {
+					console.log(module.get_pattern_row_channel(pattern, row, channel).string)
+				}
+			}
+			// FIXME : Break after first one
+			break;
+		}
     }
 });
