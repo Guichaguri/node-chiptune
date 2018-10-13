@@ -24,7 +24,7 @@ fs.readFile('file.mod', function(err, data) {
             sampleRate: 48000 // 48,000 Hz sample rate
         });
         
-        // We should be able to pipe the the chiptune stream to the speaker
+        // We should be able to pipe the chiptune stream to the speaker
         chiptuneStream.pipe(new Speaker());
     }
 });
