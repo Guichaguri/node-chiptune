@@ -6,6 +6,8 @@ Convert tracker music to PCM streams in Node.js.
 
 If you are looking for a HTML5 player to play tracker music, check out [Chiptune2.js](https://github.com/deskjet/chiptune2.js)
 
+As for libopenmpt 0.3, there are now asm.js binaries being distributed in [their website](https://lib.openmpt.org/libopenmpt/download/). You can update this package by replacing the `libopenmpt.js` and the `libopenmpt.js.mem` files.
+
 ## Example
 
 ```javascript
@@ -31,7 +33,7 @@ fs.readFile('file.mod', function(err, data) {
 ## Supported formats
 Basically all the formats supported by libopenmpt, here is the list:
 
-`mod s3m xm it mptm stm nst m15 stk wow ult 669 mtm med far mdl ams dsm amf okt dmf ptm psm mt2 dbm digi imf j2b gdm umx plm mo3 xpk ppm mmcmp`
+`mod s3m xm it mptm stm pt36 nst m15 stk st26 ice wow ult 669 mtm med far mdl ams dsm amf okt dmf ptm psm mt2 dbm digi imf j2b plm sfx sfx2 mms stp dtm gdm umx mo3 xpk ppm mmcmp`
 
 ## Thanks to
 

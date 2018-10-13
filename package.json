@@ -1,6 +1,6 @@
 {
   "name": "node-chiptune",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Convert tracker music to PCM streams",
   "main": "index.js",
   "author": "Guichaguri",
