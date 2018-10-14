@@ -13,7 +13,7 @@ module.exports = function(buffer, options) {
 
     const samplerate = options['sampleRate'] || 48000;
     const channels = options['channels'] || 2;
-    const maxFramesPerChunk = options['readSize'] || 2048;
+    const maxFramesPerChunk = options['readSize'] || 1024;
 
     if(channels != 1 && channels != 2 && channels != 4) {
         throw new Error('Invalid number of channels');
@@ -28,36 +28,16 @@ module.exports = function(buffer, options) {
     }
 };
 
-function createTransformerStream(samplerate, channels, maxFramesPerChunk, bytesPerFrame) {
-    const transformer = stream.Transform();
-
-    let mod_ptr = null; // Module
-    let buf_ptr = null; // Buffer
-    let chunks = []; // Chunks
-
-    transformer._transform = function(chunk, encoding, callback) {
-        chunks.push(chunk);
-        callback();
-    };
-
-    transformer._flush = function(callback) {
-        mod_ptr = initModule(Buffer.concat(chunks));
-        buf_ptr = initBuffer(bytesPerFrame, maxFramesPerChunk);
-    };
-
-    return transformer;
-}
-
 function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFrame) {
     // TODO: change duplex to something better
     const duplex = stream.Duplex();
 
-    let mod_ptr = null;
-    let buf_ptr = null;
-    let data = [];
-    let superPipe = duplex.pipe;
-    let toPipe = [];
-    let destroyed = false;
+    var mod_ptr = null;
+    var buf_ptr = null;
+    var data = [];
+    var superPipe = duplex.pipe;
+    var toPipe = [];
+    var destroyed = false;
 
     // Once it finishes writing, lets decode the music
     duplex.once('finish', function() {
@@ -81,44 +61,32 @@ function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFra
         next();
     };
 
-    duplex._writev = function(chunks, next) {
-        for(let i = 0; i < chunks.length; i++) {
-            data.push(chunks[i]);
-        }
-        next();
-    };
-
-    duplex._read = function(size) {
-        if(destroyed || mod_ptr == null) {
-            duplex.push(null);
-            return;
-        }
-
-        let needsMore = true;
-
-        while(needsMore) {
+    duplex._read = function(m) {
+        if(mod_ptr != null) {
             const buf = readModule(mod_ptr, buf_ptr, samplerate, channels, maxFramesPerChunk, bytesPerFrame);
-
-            needsMore = duplex.push(buf);
-
             if(buf == null) {
                 cleanupModule(mod_ptr, buf_ptr);
                 mod_ptr = null;
                 buf_ptr = null;
                 destroyed = true;
-                break;
             }
+            duplex.push(buf);
+        } else if(destroyed) {
+            duplex.push(null);
+            duplex.emit('end');
+        } else {
+            duplex.push(null);
         }
     };
 
     // Dirty trick. TODO: Change it to something better
-    /*duplex.pipe = function(dest, options) {
+    duplex.pipe = function(dest, options) {
         if(mod_ptr != null) {
             superPipe.apply(duplex, arguments);
         } else {
             toPipe.push(arguments);
         }
-    };*/
+    };
 
     duplex.destroy = function() {
         duplex.end();
@@ -138,7 +106,7 @@ function createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, b
 
     const mod_ptr = initModule(buffer);
     const buf_ptr = initBuffer(maxFramesPerChunk, bytesPerFrame);
-    let destroyed = false;
+    var destroyed = false;
 
     readable._read = function() {
         if(destroyed) {
@@ -164,8 +132,8 @@ function createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, b
 }
 
 function initModule(buffer) {
-    let array = new Int8Array(buffer);
-    let allocMem = native._malloc(array.byteLength);
+    var array = new Int8Array(buffer);
+    var allocMem = native._malloc(array.byteLength);
     native.HEAPU8.set(array, allocMem);
 
     return native._openmpt_module_create_from_memory(allocMem, array.byteLength, 0, 0, 0);
@@ -176,7 +144,7 @@ function initBuffer(bytesPerFrame, maxFramesPerChunk) {
 }
 
 function readModule(mod_ptr, buf_ptr, samplerate, channels, maxFramesPerChunk, bytesPerFrame) {
-    let frames = 0;
+    var frames = 0;
     switch(channels) {
         case 1:
             frames = native._openmpt_module_read_mono(mod_ptr, samplerate, maxFramesPerChunk, buf_ptr);
@@ -191,7 +159,7 @@ function readModule(mod_ptr, buf_ptr, samplerate, channels, maxFramesPerChunk, b
 
     if(frames <= 0) return null;
 
-    let rawpcm = native.HEAPU8.subarray(buf_ptr, buf_ptr + bytesPerFrame * frames);
+    var rawpcm = native.HEAPU8.subarray(buf_ptr, buf_ptr + bytesPerFrame * frames);
 
     return new Buffer(rawpcm.buffer).slice(rawpcm.byteOffset, rawpcm.byteOffset + rawpcm.byteLength);
 }
@@ -250,8 +218,8 @@ function createProperties(obj, mod_ptr) {
             get: function() {
                 const metadata = {};
                 const keys = native.Pointer_stringify(native._openmpt_module_get_metadata_keys(mod_ptr)).split(';');
-                for(let i = 0; i < keys.length; i++) {
-                    let buf = native._malloc(keys[i].length + 1);
+                for(var i = 0; i < keys.length; i++) {
+                    var buf = native._malloc(keys[i].length + 1);
                     native.writeStringToMemory(keys[i], buf);
                     metadata[keys[i]] = native.Pointer_stringify(native._openmpt_module_get_metadata(mod_ptr, buf));
                     native._free(buf);
