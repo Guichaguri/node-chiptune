@@ -104,7 +104,12 @@ function createDuplexStream(samplerate, channels, maxFramesPerChunk, bytesPerFra
 function createReadableStream(buffer, samplerate, channels, maxFramesPerChunk, bytesPerFrame) {
     const readable = stream.Readable();
 
-    const mod_ptr = initModule(buffer);
+    //Added getto try catch to allow for checking if the filetype was actually valid and worked
+    try {
+      const mod_ptr = initModule(buffer);
+    } catch (e) {
+      throw new Error(e);
+    }
     const buf_ptr = initBuffer(maxFramesPerChunk, bytesPerFrame);
     var destroyed = false;
 
